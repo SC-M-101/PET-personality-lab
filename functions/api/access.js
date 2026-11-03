@@ -10,8 +10,8 @@ function cookieCode(request) {
 
 export async function onRequestGet({ request, env }) {
   if (!env.PET_CODE_SECRET || env.PET_CODE_SECRET.length < 32) return new Response(JSON.stringify({ ok: false, configured: false }), { status: 503, headers });
-  const ok = await isValidCode(env.PET_CODE_SECRET, cookieCode(request));
-  return new Response(JSON.stringify({ ok, configured: true }), { headers });
+  const ok = await isValidCode(env.PET_CODE_SECRET, cookieCode(request), env.PET_NUMERIC_CODES);
+  return new Response(JSON.stringify({ ok, configured: true, numericConfigured: Boolean(env.PET_NUMERIC_CODES) }), { headers });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -21,9 +21,9 @@ export async function onRequestPost({ request, env }) {
   if (Number(request.headers.get('Content-Length') || 0) > 1024) return new Response(JSON.stringify({ ok: false, error: '验证码格式不正确。' }), { status: 400, headers });
   let code;
   try { code = (await request.json()).code; } catch { return new Response(JSON.stringify({ ok: false, error: '请输入验证码。' }), { status: 400, headers }); }
-  const valid = await isValidCode(env.PET_CODE_SECRET, code);
+  if (/^[0-9]{6}$/.test(normalizeCode(code)) && !env.PET_NUMERIC_CODES) return new Response(JSON.stringify({ ok: false, error: '数字验证码尚未启用，请联系卖家。' }), { status: 503, headers });
+  const valid = await isValidCode(env.PET_CODE_SECRET, code, env.PET_NUMERIC_CODES);
   if (!valid) return new Response(JSON.stringify({ ok: false, error: '验证码不正确，请检查发货消息后重试。' }), { status: 401, headers });
   const normalized = normalizeCode(code);
   return new Response(JSON.stringify({ ok: true }), { headers: { ...headers, 'Set-Cookie': `${cookieName}=${normalized}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` } });
 }
-
