@@ -64,5 +64,5 @@
 .access-submit{width:100%;margin-top:24px}
 .access-message{min-height:22px;margin:12px 0 0;color:#a44862;font-size:13px;line-height:1.6}
 .access-help{margin:12px 0 0;padding-top:16px;border-top:1px solid #eadfe8;color:#8d8094;font-size:12px;line-height:1.75}
+.legacy-code-toggle{border:0;background:transparent;color:#765aab;font-size:12px;margin-top:9px;padding:4px 0;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:620px){.access-screen{padding-top:25px}.access-panel{padding:25px}.access-panel h1{font-size:25px}}
-
