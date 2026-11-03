@@ -54,3 +54,15 @@
 @media(max-width:620px){.welcome{padding-top:30px}.welcome h1{font-size:clamp(40px,11.5vw,54px)}.species-picker{grid-template-columns:1fr;gap:8px}.species-choice{min-height:65px;gap:11px;padding:10px 14px}.species-choice .species-symbol{flex-basis:36px;width:36px;height:36px;font-size:19px;border-radius:9px}.species-choice strong{font-size:13px}.species-choice small{font-size:10px}.choice-tick{font-size:17px}.hero-visual{min-height:300px}.hero-content .fine-print{max-width:330px}}
 @media(max-width:620px){.share-panel{padding:25px 21px}.share-actions{display:grid}.share-actions .button{width:100%}}
 @media(max-width:620px){.photo-upload{flex-wrap:wrap}.photo-upload small{flex-basis:100%;margin:0;text-align:left;padding-left:50px}.result-pet-photo{width:74px;height:74px;border-radius:19px}}
+
+.access-screen{max-width:560px;margin:0 auto;padding-top:36px}
+.access-screen>.back-link{margin-bottom:16px}
+.access-panel{padding:38px}
+.access-panel h1{margin:13px 0 7px;font-size:30px;letter-spacing:-.04em}
+.access-panel .muted{margin:0}
+.access-panel .field input{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}
+.access-submit{width:100%;margin-top:24px}
+.access-message{min-height:22px;margin:12px 0 0;color:#a44862;font-size:13px;line-height:1.6}
+.access-help{margin:12px 0 0;padding-top:16px;border-top:1px solid #eadfe8;color:#8d8094;font-size:12px;line-height:1.75}
+@media(max-width:620px){.access-screen{padding-top:25px}.access-panel{padding:25px}.access-panel h1{font-size:25px}}
+

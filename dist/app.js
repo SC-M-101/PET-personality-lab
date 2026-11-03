@@ -35,7 +35,7 @@ function current() { return species[state.kind]; }
 function loadState() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
-    if (!saved || !['welcome', 'info', 'quiz', 'results'].includes(saved.screen)) return freshState();
+    if (!saved || !['welcome', 'access', 'info', 'quiz', 'results'].includes(saved.screen)) return freshState();
     if (saved.kind && !species[saved.kind]) return freshState();
     if (!saved.pet || !saved.answers || !Array.isArray(saved.order)) return freshState();
     saved.pet.photo = typeof saved.pet.photo === 'string' && saved.pet.photo.length < 2000000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(saved.pet.photo) ? saved.pet.photo : '';
@@ -50,6 +50,8 @@ function loadState() {
   } catch { return freshState(); }
 }
 let state = loadState();
+let accessStatus = 'checking';
+let accessGranted = false;
 function persist() { try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)); return true; } catch { return false; } }
 let photoImage = null;
 let photoReady = Promise.resolve();
@@ -96,7 +98,7 @@ function renderWelcome() {
     <div class="hero-content"><span class="eyebrow">THE PET PERSONALITY LAB · VOL. 01</span>
       <h1>它的小世界，<br><em>藏着什么设定？</em></h1>
       <p class="hero-copy">先选家里的猫咪或狗狗，再从它平常的动作和选择里，认识独一无二的它。</p>
-      <div class="hero-facts"><span>✦ 猫狗各 25 种趣味画像</span><span>✦ 主性格＋另一面</span><span>✦ 无需登录</span></div>
+      <div class="hero-facts"><span>✦ 猫狗各 25 种趣味画像</span><span>✦ 主性格＋另一面</span><span>✦ 购买后输入验证码</span></div>
       <div class="species-picker" role="group" aria-label="选择家里的伙伴">
         <button type="button" class="species-choice ${state.kind === 'cat' ? 'selected' : ''}" data-kind="cat" aria-pressed="${state.kind === 'cat'}"><span class="species-symbol" aria-hidden="true">喵</span><span><strong>我家是猫咪</strong><small>54 个日常观察</small></span><span class="choice-tick" aria-hidden="true">${state.kind === 'cat' ? '✓' : '○'}</span></button>
         <button type="button" class="species-choice ${state.kind === 'dog' ? 'selected' : ''}" data-kind="dog" aria-pressed="${state.kind === 'dog'}"><span class="species-symbol" aria-hidden="true">汪</span><span><strong>我家是狗狗</strong><small>45 个日常观察</small></span><span class="choice-tick" aria-hidden="true">${state.kind === 'dog' ? '✓' : '○'}</span></button>
@@ -110,7 +112,39 @@ function renderWelcome() {
     </div>
   </section>`;
   app.querySelectorAll('[data-kind]').forEach(button => button.addEventListener('click', () => { if (state.kind !== button.dataset.kind) resetFor(button.dataset.kind); renderWelcome(); }));
-  app.querySelector('#begin').addEventListener('click', () => { if (current()) goTo('info'); });
+  app.querySelector('#begin').addEventListener('click', () => { if (current()) goTo(accessGranted ? 'info' : 'access'); });
+}
+
+function renderAccess() {
+  const who = current();
+  const checking = accessStatus === 'checking';
+  app.innerHTML = `<section class="access-screen screen"><button id="back-welcome" class="back-link" type="button">← 返回选择猫狗</button>
+    <div class="panel access-panel"><span class="eyebrow">ONE ORDER · ONE CODE</span><h1>给${who.label}开启测试</h1>
+      <p class="muted">购买后，请从小红书的发货消息里复制专属验证码。每笔订单对应一个码，验证后可以反复测试。</p>
+      <form id="access-form"><label class="field"><span>订单验证码</span><input name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="PET-XXXX-XXXX-XXXX-XXXX" required ${checking ? 'disabled' : ''}></label>
+        <button class="button button-primary access-submit" type="submit" ${checking ? 'disabled' : ''}>${checking ? '正在检查购买记录…' : '验证并开始 ↗'}</button><p id="access-message" class="access-message" role="status" aria-live="polite">${accessStatus === 'error' ? '暂时无法连接验证服务，请稍后重试。' : ''}</p></form>
+      <p class="access-help">找不到验证码？请查看小红书订单的发货消息，或联系卖家。</p>
+    </div></section>`;
+  app.querySelector('#back-welcome').addEventListener('click', () => goTo('welcome'));
+  app.querySelector('#access-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    const message = form.querySelector('#access-message');
+    const code = form.elements.code.value.trim();
+    button.disabled = true;
+    button.textContent = '正在验证…';
+    message.textContent = '';
+    try {
+      const response = await fetch('/api/access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ code }) });
+      const data = await response.json();
+      if (!response.ok || !data.ok) { message.textContent = data.error || '验证暂时失败，请稍后重试。'; return; }
+      accessGranted = true;
+      accessStatus = 'ready';
+      goTo('info');
+    } catch { message.textContent = '暂时无法连接验证服务，请检查网络后重试。'; }
+    finally { button.disabled = false; button.textContent = '验证并开始 ↗'; }
+  });
 }
 
 function startQuiz(skip) {
@@ -260,5 +294,15 @@ function renderResults() {
 }
 function review() { state.screen = 'quiz'; state.index = current().count - 1; persist(); renderQuiz(); scrollTop(); }
 function restart() { if (advanceTimer) clearTimeout(advanceTimer); state = freshState(); persist(); render(); scrollTop(); }
-function render() { if (state.screen === 'quiz') renderQuiz(); else if (state.screen === 'results') renderResults(); else if (state.screen === 'info') renderInfo(); else renderWelcome(); }
+function render() {
+  if (state.screen === 'welcome') return renderWelcome();
+  if (!accessGranted || state.screen === 'access') return renderAccess();
+  if (state.screen === 'quiz') return renderQuiz();
+  if (state.screen === 'results') return renderResults();
+  return renderInfo();
+}
 render();
+fetch('/api/access', { credentials: 'same-origin', cache: 'no-store' })
+  .then(async response => { const data = await response.json(); accessGranted = response.ok && data.ok === true; accessStatus = response.ok ? 'ready' : 'error'; if (accessGranted && state.screen === 'access') { state.screen = 'info'; persist(); } render(); })
+  .catch(() => { accessStatus = 'error'; render(); });
+
