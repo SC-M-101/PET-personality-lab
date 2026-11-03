@@ -121,11 +121,20 @@ function renderAccess() {
   app.innerHTML = `<section class="access-screen screen"><button id="back-welcome" class="back-link" type="button">← 返回选择猫狗</button>
     <div class="panel access-panel"><span class="eyebrow">ONE ORDER · ONE CODE</span><h1>给${who.label}开启测试</h1>
       <p class="muted">购买后，请从小红书的发货消息里复制专属验证码。每笔订单对应一个码，验证后可以反复测试。</p>
-      <form id="access-form"><label class="field"><span>订单验证码</span><input name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="PET-XXXX-XXXX-XXXX-XXXX" required ${checking ? 'disabled' : ''}></label>
+      <form id="access-form"><label class="field"><span>订单验证码</span><input name="code" type="text" inputmode="numeric" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="输入发货消息中的 6 位数字" required ${checking ? 'disabled' : ''}></label>
+        <button id="legacy-code-toggle" class="legacy-code-toggle" type="button">使用旧版字母码</button>
         <button class="button button-primary access-submit" type="submit" ${checking ? 'disabled' : ''}>${checking ? '正在检查购买记录…' : '验证并开始 ↗'}</button><p id="access-message" class="access-message" role="status" aria-live="polite">${accessStatus === 'error' ? '暂时无法连接验证服务，请稍后重试。' : ''}</p></form>
       <p class="access-help">找不到验证码？请查看小红书订单的发货消息，或联系卖家。</p>
     </div></section>`;
   app.querySelector('#back-welcome').addEventListener('click', () => goTo('welcome'));
+  app.querySelector('#legacy-code-toggle').addEventListener('click', event => {
+    const input = app.querySelector('#access-form input[name="code"]');
+    const legacy = input.inputMode === 'numeric';
+    input.inputMode = legacy ? 'text' : 'numeric';
+    input.placeholder = legacy ? '输入旧版 PET- 字母码' : '输入发货消息中的 6 位数字';
+    event.currentTarget.textContent = legacy ? '使用 6 位数字码' : '使用旧版字母码';
+    input.focus();
+  });
   app.querySelector('#access-form').addEventListener('submit', async event => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -305,4 +314,3 @@ render();
 fetch('/api/access', { credentials: 'same-origin', cache: 'no-store' })
   .then(async response => { const data = await response.json(); accessGranted = response.ok && data.ok === true; accessStatus = response.ok ? 'ready' : 'error'; if (accessGranted && state.screen === 'access') { state.screen = 'info'; persist(); } render(); })
   .catch(() => { accessStatus = 'error'; render(); });
-
